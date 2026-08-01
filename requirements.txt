@@ -2,3 +2,5 @@ streamlit
 osmnx
 folium
 streamlit-folium
+networkx
+pandas
