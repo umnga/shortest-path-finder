@@ -52,12 +52,36 @@ def load_kathmandu_graph():
 def nearest_graph_nodes(
     graph, start_coords: tuple[float, float], end_coords: tuple[float, float]
 ) -> tuple[int, int]:
-    """Snap start/end coordinates to nearest drivable graph nodes."""
+    """Snap start/end coordinates to nearest drivable graph nodes.
+
+    We intentionally avoid ``ox.distance.nearest_nodes`` here. Its optional
+    fast-paths rely on compiled spatial dependencies, and in some local
+    environments those can crash the host process. A linear scan is stable and
+    still fast enough for Kathmandu's graph size.
+    """
+
+    def nearest_node_for(lat: float, lon: float) -> int:
+        best_node: int | None = None
+        best_dist = float("inf")
+
+        for node_id, data in graph.nodes(data=True):
+            node_lat = data.get("y")
+            node_lon = data.get("x")
+            if node_lat is None or node_lon is None:
+                continue
+
+            dist = _haversine_distance(lat, lon, float(node_lat), float(node_lon))
+            if dist < best_dist:
+                best_dist = dist
+                best_node = int(node_id)
+
+        if best_node is None:
+            raise ValueError("Graph has no nodes with valid coordinates")
+        return best_node
+
     start_lat, start_lon = start_coords
     end_lat, end_lon = end_coords
-    start_node = ox.distance.nearest_nodes(graph, X=start_lon, Y=start_lat)
-    end_node = ox.distance.nearest_nodes(graph, X=end_lon, Y=end_lat)
-    return start_node, end_node
+    return nearest_node_for(start_lat, start_lon), nearest_node_for(end_lat, end_lon)
 
 
 # ---------------------------------------------------------------------------
