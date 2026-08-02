@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from heapq import heappop, heappush
 from math import asin, cos, radians, sin, sqrt
 from time import perf_counter
-from typing import Any, Iterator, Optional
+from typing import Any, Iterator
 
 import networkx as nx
 import osmnx as ox
@@ -26,18 +26,6 @@ class SearchMetrics:
     max_frontier_size: int
     path_distance_m: float
     path_nodes: int
-
-
-@dataclass
-class EdgeCriticality:
-    """Criticality score for a single graph edge."""
-
-    u: int
-    v: int
-    criticality_index: float  # C_e
-    baseline_distance: float
-    mutated_distance: float
-    is_bottleneck: bool  # True when C_e > threshold (e.g. 0.5)
 
 
 @dataclass
@@ -136,23 +124,6 @@ def _min_edge_length(graph, u: int, v: int) -> float:
     return min(attributes.get("length", float("inf")) for attributes in edge_data.values())
 
 
-def remove_all_parallel_edges(graph, u: int, v: int) -> int:
-    """Remove every parallel edge between *u* and *v* on a MultiDiGraph.
-
-    ``graph.remove_edge(u, v)`` only removes a single parallel edge, leaving
-    the nodes connected (and ``has_edge`` still True) whenever more than one
-    edge exists between them. Road graphs from OSMnx are MultiDiGraphs and
-    frequently have parallel edges, so severing a road requires removing all
-    of them. Returns the number of edges removed.
-    """
-    if not graph.has_edge(u, v):
-        return 0
-    keys = list(graph[u][v].keys())
-    for key in keys:
-        graph.remove_edge(u, v, key=key)
-    return len(keys)
-
-
 def route_distance_meters(graph, route: list[int]) -> float:
     """Sum the shortest edge lengths along a route."""
     total = 0.0
@@ -172,8 +143,7 @@ def route_to_coordinates(graph, route: list[int]) -> list[tuple[float, float]]:
     nodes with a straight line skips that geometry and can visually cut
     across blocks, hills, or other terrain no road actually crosses —
     especially for long edges. This uses the stored geometry when present
-    and only falls back to a straight line when it isn't (e.g. on the
-    synthetic benchmark grids, which have no geometry at all).
+    and only falls back to a straight line when it isn't.
     """
     if not route:
         return []
@@ -253,9 +223,8 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> f
 def _estimate_coord_scale(graph) -> float:
     """Estimate metres per coordinate-unit using the first edge with a length.
 
-    Real OSMnx graphs store coordinates as decimal degrees (scale ~ 100,000),
-    while synthetic grids use arbitrary units with small lengths (scale ~ 1).
-    The heuristic is scaled by this factor so it stays admissible on both.
+    Real OSMnx graphs store coordinates as decimal degrees (scale ~ 100,000).
+    The heuristic is scaled by this factor so it stays admissible.
     """
     for u, v, length in graph.edges(data="length"):
         if length is None:
@@ -384,8 +353,7 @@ def astar_shortest_path(
                 sqrt((node_lat - target_lat) ** 2 + (node_lon - target_lon) ** 2)
                 * coord_scale
             )
-            # min of two lower bounds keeps the heuristic admissible on both
-            # real geo graphs and synthetic grids
+            # min of two lower bounds keeps the heuristic admissible
             return min(geo_estimate, grid_estimate)
 
         g_score: dict[int, float] = {start_node: 0.0}
@@ -567,289 +535,3 @@ def bidirectional_dijkstra_shortest_path(
         path_nodes=len(route),
     )
     return route, metrics
-
-
-# ===================================================================
-# EDGE CRITICALITY / VULNERABILITY ENGINE
-# ===================================================================
-
-
-def compute_global_baseline(
-    graph,
-    sample_ratio: float = 0.15,
-    algorithm: str = "Dijkstra",
-    max_pairs: int = 500,
-) -> float:
-    """Compute the baseline global metric M_base = average shortest-path
-    distance over a sampled set of origin-destination pairs.
-
-    Uses *sample_ratio* of nodes (capped at *max_pairs* pairs) to keep
-    computation tractable on large networks.
-    """
-    all_nodes = list(graph.nodes)
-    n_samples = max(2, int(len(all_nodes) * sample_ratio))
-
-    import random
-
-    random.seed(42)
-    sampled = random.sample(all_nodes, min(n_samples, len(all_nodes)))
-
-    total_distance = 0.0
-    pair_count = 0
-
-    for i, src in enumerate(sampled):
-        for dst in sampled[i + 1 :]:
-            if pair_count >= max_pairs:
-                break
-            route, metrics = solve_shortest_path_between_nodes(
-                graph, src, dst, algorithm
-            )
-            if route:
-                total_distance += metrics.path_distance_m
-                pair_count += 1
-        if pair_count >= max_pairs:
-            break
-
-    if pair_count == 0:
-        return 0.0
-    return total_distance / pair_count
-
-
-def compute_edge_criticality(
-    graph,
-    edge: tuple[int, int],
-    baseline_distance: float,
-    algorithm: str = "Dijkstra",
-    sample_ratio: float = 0.10,
-    max_pairs: int = 200,
-    bottleneck_threshold: float = 0.5,
-) -> EdgeCriticality:
-    """Compute the Criticality Index C_e for a single edge.
-
-    C_e = (M_mutated - M_base) / M_base
-
-    The edge is removed from a *copy* of the graph, then the mutated
-    baseline is recomputed.
-    """
-    u, v = edge
-
-    # Build a subgraph copy with the edge removed
-    # osmnx graphs are MultiDiGraphs, so a node pair can have more than one
-    # parallel edge between them; all of them must go for the edge to be
-    # truly severed.
-    gc = graph.copy()
-    remove_all_parallel_edges(gc, u, v)
-
-    mutated_distance = compute_global_baseline(
-        gc, sample_ratio=sample_ratio, algorithm=algorithm, max_pairs=max_pairs
-    )
-
-    if baseline_distance == 0:
-        ci = 0.0
-    else:
-        ci = (mutated_distance - baseline_distance) / baseline_distance
-
-    return EdgeCriticality(
-        u=u,
-        v=v,
-        criticality_index=ci,
-        baseline_distance=baseline_distance,
-        mutated_distance=mutated_distance,
-        is_bottleneck=ci > bottleneck_threshold,
-    )
-
-
-def criticality_sweep(
-    graph,
-    algorithm: str = "Dijkstra",
-    sample_ratio: float = 0.10,
-    max_pairs: int = 200,
-    bottleneck_threshold: float = 0.5,
-    max_edges: int | None = None,
-    progress_callback=None,
-) -> list[EdgeCriticality]:
-    """Run the full criticality sweep over all edges in the graph.
-
-    Returns a list of ``EdgeCriticality`` results sorted by descending
-    criticality index.
-
-    The *progress_callback* can be ``callable(current, total)`` for UI
-    updates.
-    """
-    # 1. Compute baseline
-    baseline = compute_global_baseline(
-        graph, sample_ratio=sample_ratio, algorithm=algorithm, max_pairs=max_pairs
-    )
-
-    # 2. Collect unique undirected edges
-    seen: set[tuple[int, int]] = set()
-    edges: list[tuple[int, int]] = []
-    for u in graph.nodes:
-        for v in graph.successors(u):
-            key = (u, v) if u < v else (v, u)
-            if key not in seen:
-                seen.add(key)
-                edges.append((u, v))
-
-    if max_edges is not None:
-        edges = edges[:max_edges]
-
-    # 3. Sweep
-    results: list[EdgeCriticality] = []
-    for idx, (u, v) in enumerate(edges):
-        if progress_callback:
-            progress_callback(idx + 1, len(edges))
-
-        try:
-            ec = compute_edge_criticality(
-                graph,
-                (u, v),
-                baseline,
-                algorithm=algorithm,
-                sample_ratio=sample_ratio,
-                max_pairs=max_pairs,
-                bottleneck_threshold=bottleneck_threshold,
-            )
-            results.append(ec)
-        except Exception:
-            continue
-
-    results.sort(key=lambda r: r.criticality_index, reverse=True)
-    return results
-
-
-# ===================================================================
-# SYNTHETIC GRID GENERATOR
-# ===================================================================
-
-
-def generate_synthetic_grid(rows: int, cols: int, edge_length: float = 1.0) -> nx.MultiDiGraph:
-    """Generate a synthetic grid graph of *rows* x *cols* nodes.
-
-    Returns a directed MultiDiGraph (mirroring the OSMnx road network) so the
-    same shortest-path implementations can run on it unchanged. Each node is
-    connected to its immediate right, bottom and diagonal neighbours with
-    weight *edge_length* (edges are added in both directions). This is used
-    for empirical scaling benchmarks.
-    """
-    G = nx.MultiDiGraph()
-    node_id = 0
-    for r in range(rows):
-        for c in range(cols):
-            G.add_node(node_id, y=float(r), x=float(c))
-            node_id += 1
-
-    def _add_bidirectional(u: int, v: int, length: float) -> None:
-        G.add_edge(u, v, length=length)
-        G.add_edge(v, u, length=length)
-
-    # Horizontal edges
-    for r in range(rows):
-        for c in range(cols - 1):
-            u = r * cols + c
-            v = r * cols + c + 1
-            _add_bidirectional(u, v, edge_length)
-
-    # Vertical edges
-    for r in range(rows - 1):
-        for c in range(cols):
-            u = r * cols + c
-            v = (r + 1) * cols + c
-            _add_bidirectional(u, v, edge_length)
-
-    # Some diagonal shortcuts
-    import random
-
-    random.seed(42)
-    for r in range(rows - 1):
-        for c in range(cols - 1):
-            if random.random() < 0.3:
-                u = r * cols + c
-                v = (r + 1) * cols + (c + 1)
-                _add_bidirectional(u, v, edge_length * 1.4)
-
-    return G
-
-
-@dataclass
-class BenchmarkResult:
-    """Results of a single scaling benchmark run."""
-
-    grid_label: str
-    num_nodes: int
-    num_edges: int
-    dijkstra_runtime_ms: float
-    full_sweep_runtime_s: float
-    bottlenecks_found: int
-
-
-def run_benchmark_sweep(
-    grid_sizes: list[tuple[int, int]] | None = None,
-    algorithm: str = "Dijkstra",
-    sweep_max_edges: int = 50,
-    progress_callback=None,
-) -> list[BenchmarkResult]:
-    """Run the empirical profiling sweep across synthetic grids.
-
-    Returns a list of ``BenchmarkResult`` matching the table in the
-    proposal slides.
-    """
-    if grid_sizes is None:
-        grid_sizes = [(5, 5), (10, 10), (20, 25)]
-
-    results: list[BenchmarkResult] = []
-    total = len(grid_sizes)
-
-    for idx, (rows, cols) in enumerate(grid_sizes):
-        label = f"{rows * cols} Nodes"
-        if progress_callback:
-            progress_callback(idx + 1, total, label)
-
-        G = generate_synthetic_grid(rows, cols, edge_length=1.0)
-        nodes = list(G.nodes)
-        num_nodes = len(nodes)
-        num_edges = G.number_of_edges()
-
-        # Single Dijkstra runtime (average over 10 random pairs)
-        dijkstra_times: list[float] = []
-        import random
-
-        random.seed(0)
-        for _ in range(10):
-            src, dst = random.sample(nodes, 2)
-            t0 = perf_counter()
-            try:
-                route, metrics = solve_shortest_path_between_nodes(
-                    G, src, dst, algorithm
-                )
-            except Exception:
-                continue
-            dijkstra_times.append((perf_counter() - t0) * 1000)
-
-        avg_dijkstra = sum(dijkstra_times) / max(len(dijkstra_times), 1)
-
-        # Full criticality sweep (limited edges)
-        t0 = perf_counter()
-        criticalities = criticality_sweep(
-            G,
-            algorithm=algorithm,
-            sample_ratio=0.5,
-            max_pairs=50,
-            max_edges=sweep_max_edges,
-        )
-        sweep_time = perf_counter() - t0
-
-        bottlenecks = sum(1 for ec in criticalities if ec.is_bottleneck)
-
-        results.append(
-            BenchmarkResult(
-                grid_label=label,
-                num_nodes=num_nodes,
-                num_edges=num_edges,
-                dijkstra_runtime_ms=round(avg_dijkstra, 2),
-                full_sweep_runtime_s=round(sweep_time, 2),
-                bottlenecks_found=bottlenecks,
-            )
-        )
-
-    return results
