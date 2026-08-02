@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UrbanResilience Analyzer — Presentation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0E17;
+    --panel:#121826;
+    --panel-2:#182234;
+    --line:#26324a;
+    --text:#E7EBF2;
+    --muted:#8B96AC;
+    --amber:#E8A33D;
+    --teal:#4FD1C5;
+    --red:#E8604C;
+    --green:#6FCF97;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    overflow:hidden;
+    position:relative;
+  }
+  /* blueprint grid background */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:42px 42px;
+    opacity:0.18;
+    pointer-events:none;
+    z-index:0;
+  }
+  .deck{position:relative; width:100%; height:100vh; z-index:1;}
+  .progress{position:fixed; top:0; left:0; height:3px; background:var(--amber); width:0%; z-index:50; transition:width .35s ease;}
+  .slide{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:64px 88px;
+    opacity:0; visibility:hidden;
+    transform:translateX(40px);
+    transition:opacity .4s ease, transform .4s ease;
+  }
+  .slide.active{opacity:1; visibility:visible; transform:translateX(0);}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--teal); margin-bottom:18px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:clamp(34px,4.2vw,58px);
+    line-height:1.05;
+    margin:0 0 16px 0;
+    letter-spacing:-0.01em;
+  }
+  h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:clamp(24px,2.6vw,34px);
+    margin:0 0 26px 0;
+    letter-spacing:-0.01em;
+  }
+  h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:18px;
+    margin:0 0 8px 0;
+  }
+  p{color:var(--muted); line-height:1.6; font-size:16px; margin:0 0 14px 0;}
+  .subtitle{font-size:clamp(16px,1.4vw,20px); color:var(--muted); max-width:620px; margin-bottom:8px;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .accent{color:var(--amber);}
+  .teal{color:var(--teal);}
+  .red{color:var(--red);}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; width:100%;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:20px; width:100%;}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:22px 22px;
+  }
+  .card .tag{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--amber); letter-spacing:.08em;}
+  .card ul{margin:10px 0 0 0; padding-left:18px; color:var(--muted); font-size:14px;}
+  .card li{margin-bottom:6px;}
+  .foot-row{
+    position:fixed; bottom:0; left:0; right:0;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 40px; z-index:50;
+    background:linear-gradient(0deg, rgba(10,14,23,.92), rgba(10,14,23,0));
+  }
+  .nav-btns{display:flex; gap:10px; align-items:center;}
+  .nav-btn{
+    width:38px; height:38px; border-radius:8px;
+    background:var(--panel); border:1px solid var(--line); color:var(--text);
+    cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;
+    transition:background .2s, border-color .2s;
+  }
+  .nav-btn:hover{background:var(--panel-2); border-color:var(--amber);}
+  .dots{display:flex; gap:7px;}
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--line); cursor:pointer; transition:background .2s, transform .2s;}
+  .dot.active{background:var(--amber); transform:scale(1.3);}
+  .counter{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted);}
+  .btn{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px; letter-spacing:.04em;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:9px 14px; border-radius:7px; cursor:pointer;
+    transition:border-color .2s, color .2s;
+  }
+  .btn:hover{border-color:var(--teal); color:var(--teal);}
+  .btn.primary{border-color:var(--amber); color:var(--amber);}
+  .btn.primary:hover{background:var(--amber); color:#0A0E17;}
+  .btn.danger:hover{border-color:var(--red); color:var(--red);}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line);}
+  th{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:500;}
+  td{font-family:'IBM Plex Mono',monospace; color:var(--text);}
+  .formula-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:22px 26px; font-family:'IBM Plex Mono',monospace; font-size:22px; text-align:center;
+    color:var(--amber); margin-bottom:16px;
+  }
+  .formula-box .sub{display:block; font-size:11px; color:var(--muted); margin-top:8px; letter-spacing:.04em;}
+  .readout{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text);
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:12px 14px; min-height:20px;
+  }
+  svg text{font-family:'IBM Plex Mono',monospace; fill:var(--muted); font-size:11px;}
+  .node-label{fill:var(--text); font-size:12px; font-weight:600;}
+  .edge-line{stroke:var(--line); stroke-width:2.5; cursor:pointer;}
+  .edge-line.visited-path{stroke:var(--amber); stroke-width:4;}
+  .edge-line.removed{stroke:var(--red); stroke-dasharray:5 4; opacity:.5;}
+  .node-circle{stroke:var(--panel-2); stroke-width:2; transition:fill .25s;}
+  .node-circle.visited{fill:var(--teal) !important; opacity:.55;}
+  .node-circle.onpath{fill:var(--amber) !important; opacity:1;}
+  .arch-box{background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:12px 16px; font-family:'IBM Plex Mono',monospace; font-size:12px;}
+  .arrow-down{color:var(--muted); text-align:center; font-size:18px; margin:4px 0;}
+  ::selection{background:var(--amber); color:#0A0E17;}
+  .small{font-size:12px; color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progressBar"></div>
+<div class="deck" id="deck">
+
+  <!-- SLIDE 0: TITLE -->
+  <section class="slide active" data-index="0">
+    <div class="grid2">
+      <div>
+        <div class="eyebrow">COMP 314 · Algorithms &amp; Complexity · Kathmandu University · May 2026</div>
+        <h1>Urban<span class="accent">Resilience</span><br>Analyzer</h1>
+        <p class="subtitle">A graph-based tool that finds the fastest route across Kathmandu's road network — and identifies which single road, if it failed, would hurt the network most.</p>
+        <p class="small mono">Route Finder · Edge Criticality Engine · Empirical Benchmarks</p>
+      </div>
+      <div>
+        <svg viewBox="0 0 420 320" width="100%" height="320">
+          <g id="heroGraph"></g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 1: MOTIVATION -->
+  <section class="slide" data-index="1">
+    <div class="eyebrow">01 · Why This Project</div>
+    <h2>Two questions every road network has to answer</h2>
+    <div class="grid2" style="align-items:start;">
+      <div class="card">
+        <div class="tag">QUESTION 1</div>
+        <h3>What's the fastest way from A to B — right now?</h3>
+        <p>Kathmandu Valley traffic is dense and unevenly distributed. A driver, an ambulance, or a delivery route all need the same thing: the shortest path through a huge, sparse, real-world graph — computed fast enough to feel instant.</p>
+      </div>
+      <div class="card">
+        <div class="tag">QUESTION 2</div>
+        <h3>Which roads is the network quietly depending on?</h3>
+        <p>Construction, floods, festivals, and accidents close roads constantly. Some closures barely matter. Others cut off entire neighborhoods. Which roads are those — <em>before</em> they close, not after?</p>
+      </div>
+    </div>
+    <p style="margin-top:26px;">UrbanResilience Analyzer answers both, on the same underlying graph: a <span class="teal">Route Finder</span> for question one, and an <span class="accent">Edge Criticality &amp; Vulnerability Engine</span> for question two.</p>
+  </section>
+
+  <!-- SLIDE 2: GRAPH MODEL -->
+  <section class="slide" data-index="2">
+    <div class="eyebrow">02 · From Roads to Graphs</div>
+    <h2>The road network as a weighted graph</h2>
+    <div class="grid2">
+      <div>
+        <p>We pull Kathmandu's real, drivable street network using <span class="mono teal">OSMnx</span>. Every intersection becomes a <strong>node</strong>; every road segment between two intersections becomes an <strong>edge</strong>, weighted by distance.</p>
+        <div class="card" style="margin-top:18px;">
+          <div class="tag">WHY AN ADJACENCY LIST</div>
+          <p style="margin:8px 0 0 0;">A city road network is <strong>sparse</strong> — each intersection connects to a handful of others, not to every other intersection. An adjacency list stores exactly those real connections, giving <span class="mono">O(V+E)</span> space instead of the <span class="mono">O(V²)</span> an adjacency matrix would waste on mostly-empty entries.</p>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <svg viewBox="0 0 320 260" width="100%" height="260">
+          <circle cx="90" cy="60" r="7" fill="var(--teal)"/>
+          <circle cx="180" cy="40" r="7" fill="var(--teal)"/>
+          <circle cx="230" cy="110" r="7" fill="var(--teal)"/>
+          <circle cx="140" cy="140" r="7" fill="var(--teal)"/>
+          <circle cx="60" cy="150" r="7" fill="var(--teal)"/>
+          <line x1="90" y1="60" x2="180" y2="40" stroke="#8B96AC" stroke-width="2"/>
+          <line x1="180" y1="40" x2="230" y2="110" stroke="#8B96AC" stroke-width="2"/>
+          <line x1="90" y1="60" x2="140" y2="140" stroke="#8B96AC" stroke-width="2"/>
+          <line x1="140" y1="140" x2="230" y2="110" stroke="#8B96AC" stroke-width="2"/>
+          <line x1="140" y1="140" x2="60" y2="150" stroke="#8B96AC" stroke-width="2"/>
+          <line x1="90" y1="60" x2="60" y2="150" stroke="#8B96AC" stroke-width="2"/>
+          <text x="60" y="200" fill="var(--muted)">intersections → nodes</text>
+          <text x="60" y="218" fill="var(--muted)">road segments → weighted edges</text>
+        </svg>
+        <div class="readout mono" style="text-align:left; margin-top:6px;">
+adj[E] = [ {to: G, w: 8}, {to: H, w: 8}, {to: C, w: 9}, {to: B, w: 9}, {to: F, w: 8} ]
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3: ALGORITHMS -->
+  <section class="slide" data-index="3">
+    <div class="eyebrow">03 · Three Ways to Search the Same Graph</div>
+    <h2>Dijkstra, A*, and Bidirectional Dijkstra</h2>
+    <div class="grid3">
+      <div class="card">
+        <div class="tag">GREEDY · UNINFORMED</div>
+        <h3>Dijkstra's Algorithm</h3>
+        <p style="font-size:14px;">Always expands the cheapest unvisited node next, using a binary min-heap. Guarantees the shortest path, exploring outward in every direction equally.</p>
+        <ul><li class="mono" style="color:var(--text)">O((V+E) log V)</li></ul>
+      </div>
+      <div class="card">
+        <div class="tag">GREEDY · INFORMED</div>
+        <h3>A* Search</h3>
+        <p style="font-size:14px;">Same relaxation step as Dijkstra, but a <strong>haversine-distance heuristic</strong> pulls expansion toward the destination — same guarantee, usually far fewer nodes touched.</p>
+        <ul><li class="mono" style="color:var(--text)">O((V+E) log V) worst case</li></ul>
+      </div>
+      <div class="card">
+        <div class="tag">GREEDY · TWO-SIDED</div>
+        <h3>Bidirectional Dijkstra</h3>
+        <p style="font-size:14px;">Runs Dijkstra from the source <em>and</em> from the destination at once, stopping the instant the two frontiers meet in the middle.</p>
+        <ul><li class="mono" style="color:var(--text)">≈ halves the search radius</li></ul>
+      </div>
+    </div>
+    <p style="margin-top:22px;">All three return the <em>same</em> optimal path on a graph with non-negative weights — they differ only in how many nodes they have to touch to find it. That difference is exactly what the Route Finder measures.</p>
+  </section>
+
+  <!-- SLIDE 4: INTERACTIVE ROUTE FINDER DEMO -->
+  <section class="slide" data-index="4">
+    <div class="eyebrow">04 · Live Demo</div>
+    <h2>Route Finder — run it yourself</h2>
+    <div class="grid2" style="grid-template-columns:1.3fr 1fr; align-items:start;">
+      <div>
+        <svg viewBox="0 0 860 460" width="100%" height="380">
+          <g id="rf-edges"></g>
+          <g id="rf-nodes"></g>
+        </svg>
+        <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+          <button class="btn primary" onclick="runDemo('dijkstra')">Run Dijkstra</button>
+          <button class="btn primary" onclick="runDemo('astar')">Run A*</button>
+          <button class="btn primary" onclick="runDemo('bidir')">Run Bidirectional</button>
+          <button class="btn" onclick="compareAll()">Compare All</button>
+          <button class="btn danger" onclick="resetDemo()">Reset</button>
+        </div>
+      </div>
+      <div>
+        <p class="small">Source <span class="mono" style="color:var(--green)">A</span> → Destination <span class="mono" style="color:var(--amber)">L</span>. Watch the frontier expand (teal) before the shortest path locks in (amber).</p>
+        <table>
+          <thead><tr><th>Algorithm</th><th>Expanded</th><th>Cost</th></tr></thead>
+          <tbody id="metricsBody">
+            <tr><td class="mono" style="color:var(--muted)">—</td><td class="mono">—</td><td class="mono">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5: CRITICALITY -->
+  <section class="slide" data-index="5">
+    <div class="eyebrow">05 · Live Demo</div>
+    <h2>Edge Criticality — click a road to sever it</h2>
+    <div class="grid2" style="grid-template-columns:1.3fr 1fr; align-items:start;">
+      <div>
+        <svg viewBox="0 0 860 460" width="100%" height="360">
+          <g id="cr-edges"></g>
+          <g id="cr-nodes"></g>
+        </svg>
+        <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;">
+          <button class="btn primary" onclick="runFullSweep()">Run Full Sweep</button>
+          <button class="btn danger" onclick="resetCriticality()">Reset</button>
+        </div>
+      </div>
+      <div>
+        <div class="formula-box" style="font-size:17px;">
+          C<sub>e</sub> = (M<sub>mutated</sub> − M<sub>base</sub>) / M<sub>base</sub>
+          <span class="sub">extra cost after removing edge e, relative to baseline</span>
+        </div>
+        <p class="small">Baseline is the shortest A→L cost with the full network. Click any road segment to remove it and watch the readout below. <span class="red">C<sub>e</sub> &gt; 0.5</span> is flagged a bottleneck.</p>
+        <div class="readout" id="critReadout">Baseline M_base = — · click an edge to begin</div>
+        <div class="readout" id="sweepReadout" style="margin-top:10px; display:none;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6: BENCHMARKS -->
+  <section class="slide" data-index="6">
+    <div class="eyebrow">06 · Empirical Benchmarks</div>
+    <h2>Watching the complexity, not just stating it</h2>
+    <div class="grid2">
+      <div>
+        <p>Real map data has one graph size. To actually <em>see</em> <span class="mono teal">O((V+E) log V)</span> per search and <span class="mono teal">O(E·(V+E) log V)</span> for a full criticality sweep, the engine generates <strong>synthetic grid graphs</strong> of increasing size and times every pass.</p>
+        <div class="card" style="margin-top:16px;">
+          <div class="tag">PER RUN, THE SUITE REPORTS</div>
+          <ul>
+            <li>Dijkstra runtime at each grid size</li>
+            <li>Full criticality-sweep runtime at each grid size</li>
+            <li>Bottleneck count found at each size</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <svg viewBox="0 0 380 260" width="100%" height="260" id="benchChart"></svg>
+        <p class="small" style="text-align:center;">Illustrative growth shape — single search (teal) vs. full edge sweep (amber) as grid size increases.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 7: ARCHITECTURE -->
+  <section class="slide" data-index="7">
+    <div class="eyebrow">07 · Under the Hood</div>
+    <h2>Two files, cleanly split</h2>
+    <div class="grid2" style="align-items:start;">
+      <div>
+        <div class="arch-box" style="margin-bottom:10px;">app.py <span style="color:var(--muted)">— Streamlit dashboard, 3 tabs</span></div>
+        <div class="arrow-down">↓ calls</div>
+        <div class="arch-box">shortest_path_kathmandu.py <span style="color:var(--muted)">— algorithmic engine</span></div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Module</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td>load_kathmandu_graph()</td><td class="mono" style="color:var(--muted)">OSMnx graph load</td></tr>
+            <tr><td>dijkstra_shortest_path()</td><td class="mono" style="color:var(--muted)">core search</td></tr>
+            <tr><td>astar_shortest_path()</td><td class="mono" style="color:var(--muted)">heuristic search</td></tr>
+            <tr><td>bidirectional_dijkstra_...()</td><td class="mono" style="color:var(--muted)">two-sided search</td></tr>
+            <tr><td>compute_edge_criticality()</td><td class="mono" style="color:var(--muted)">single-edge C_e</td></tr>
+            <tr><td>criticality_sweep()</td><td class="mono" style="color:var(--muted)">full edge sweep</td></tr>
+            <tr><td>run_benchmark_sweep()</td><td class="mono" style="color:var(--muted)">scaling profiler</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 8: SYLLABUS MAPPING -->
+  <section class="slide" data-index="8">
+    <div class="eyebrow">08 · Syllabus Integration</div>
+    <h2>Where each feature comes from the course</h2>
+    <div class="grid3">
+      <div class="card">
+        <div class="tag">CH. 2 — GREEDY STRATEGIES</div>
+        <p style="font-size:14px; margin-top:8px;">Dijkstra's greedy relaxation: always commit to the cheapest known distance, never revisit that choice.</p>
+      </div>
+      <div class="card">
+        <div class="tag">GRAPH DATA STRUCTURES</div>
+        <p style="font-size:14px; margin-top:8px;">Adjacency-list storage plus a binary min-heap priority queue for efficient extract-min.</p>
+      </div>
+      <div class="card">
+        <div class="tag">HEURISTIC SEARCH</div>
+        <p style="font-size:14px; margin-top:8px;">A* with an admissible haversine heuristic — informed search without losing optimality.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px;">
+      <div class="tag">EMPIRICAL PERFORMANCE PROFILING</div>
+      <p style="margin-top:8px;">Measured, not assumed: <span class="mono teal">O((V+E) log V)</span> per search, <span class="mono teal">O(E·(V+E) log V)</span> for a full criticality sweep — confirmed against the synthetic-grid benchmark suite.</p>
+    </div>
+  </section>
+
+  <!-- SLIDE 9: CONCLUSION -->
+  <section class="slide" data-index="9">
+    <div class="eyebrow">09 · Conclusion</div>
+    <h2>Two questions, one graph</h2>
+    <div class="grid2">
+      <div>
+        <p><strong style="color:var(--text)">Route Finder</strong> — three algorithms, one shortest path, compared side by side on runtime, nodes expanded, and relaxations.</p>
+        <p><strong style="color:var(--text)">Criticality Engine</strong> — sweep the graph, sever edges, and surface exactly which roads Kathmandu's network can't afford to lose.</p>
+        <p style="margin-top:24px;" class="teal mono">Questions?</p>
+      </div>
+      <div style="text-align:center;">
+        <svg viewBox="0 0 300 220" width="100%" height="220">
+          <g id="endGraph"></g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="foot-row">
+  <div class="counter" id="counter">01 / 10</div>
+  <div class="dots" id="dots"></div>
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn">←</button>
+    <button class="nav-btn" id="nextBtn">→</button>
+  </div>
+</div>
+
+<script>
+/* ---------- DECK NAVIGATION ---------- */
+const slides = Array.from(document.querySelectorAll('.slide'));
+const total = slides.length;
+let current = 0;
+
+const dotsEl = document.getElementById('dots');
+slides.forEach((s,i)=>{
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' active':'');
+  d.onclick = ()=>goTo(i);
+  dotsEl.appendChild(d);
+});
+const dots = Array.from(dotsEl.children);
+
+function goTo(i){
+  if(i<0 || i>=total) return;
+  slides[current].classList.remove('active');
+  dots[current].classList.remove('active');
+  current = i;
+  slides[current].classList.add('active');
+  dots[current].classList.add('active');
+  document.getElementById('counter').textContent = String(i+1).padStart(2,'0') + ' / ' + total;
+  document.getElementById('progressBar').style.width = ((i+1)/total*100) + '%';
+}
+document.getElementById('nextBtn').onclick = ()=>goTo(current+1);
+document.getElementById('prevBtn').onclick = ()=>goTo(current-1);
+document.addEventListener('keydown', e=>{
+  if(['ArrowRight','ArrowDown',' '].includes(e.key)){ e.preventDefault(); goTo(current+1); }
+  if(['ArrowLeft','ArrowUp'].includes(e.key)){ e.preventDefault(); goTo(current-1); }
+});
+let touchX=null;
+document.addEventListener('touchstart', e=> touchX=e.touches[0].clientX);
+document.addEventListener('touchend', e=>{
+  if(touchX===null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if(dx>60) goTo(current-1);
+  if(dx<-60) goTo(current+1);
+  touchX=null;
+});
+goTo(0);
+
+/* ---------- MOCK ROAD GRAPH ---------- */
+const nodes = {
+  A:{x:80,y:250}, B:{x:200,y:120}, C:{x:200,y:380}, D:{x:340,y:80},
+  E:{x:340,y:250}, F:{x:340,y:420}, G:{x:480,y:150}, H:{x:480,y:350},
+  I:{x:620,y:100}, J:{x:620,y:280}, K:{x:620,y:430}, L:{x:780,y:250}
+};
+const edgeList = [
+  ['A','B',8],['A','C',8],['B','D',7],['B','E',9],['C','E',9],['C','F',7],
+  ['D','G',7],['E','G',8],['E','H',8],['F','H',7],['G','I',7],['G','J',9],
+  ['H','J',7],['H','K',7],['I','L',10],['J','L',7],['K','L',11],
+  ['D','E',8],['E','F',8],['G','H',9]
+];
+const SOURCE='A', TARGET='L';
+
+function buildAdj(removed){
+  const adj={}; Object.keys(nodes).forEach(n=>adj[n]=[]);
+  edgeList.forEach((e,i)=>{
+    if(removed.has(i)) return;
+    const [u,v,w]=e;
+    adj[u].push({to:v,w,id:i});
+    adj[v].push({to:u,w,id:i});
+  });
+  return adj;
+}
+function buildPath(prev, source, target){
+  if(source===target) return [source];
+  if(!(target in prev)) return null;
+  const path=[target]; let cur=target;
+  while(cur!==source){
+    if(!(cur in prev)) return null;
+    cur=prev[cur]; path.push(cur);
+  }
+  return path.reverse();
+}
+function dijkstra(source,target,removed=new Set()){
+  const adj=buildAdj(removed);
+  const dist={}; Object.keys(nodes).forEach(n=>dist[n]=Infinity);
+  dist[source]=0;
+  const prev={}, visited=new Set(), order=[];
+  const pq=[[0,source]]; let relax=0;
+  while(pq.length){
+    pq.sort((a,b)=>a[0]-b[0]);
+    const [d,u]=pq.shift();
+    if(visited.has(u)) continue;
+    visited.add(u); order.push(u);
+    if(u===target) break;
+    for(const {to,w} of adj[u]){
+      relax++;
+      if(dist[u]+w<dist[to]){ dist[to]=dist[u]+w; prev[to]=u; pq.push([dist[to],to]); }
+    }
+  }
+  return {order,cost:dist[target],expanded:order.length,relax,path:buildPath(prev,source,target)};
+}
+function astar(source,target,removed=new Set()){
+  const adj=buildAdj(removed);
+  const dist={}; Object.keys(nodes).forEach(n=>dist[n]=Infinity);
+  dist[source]=0;
+  const prev={}, visited=new Set(), order=[];
+  const h=n=>Math.hypot(nodes[n].x-nodes[target].x, nodes[n].y-nodes[target].y)/22;
+  const pq=[[h(source),source]]; let relax=0;
+  while(pq.length){
+    pq.sort((a,b)=>a[0]-b[0]);
+    const [f,u]=pq.shift();
+    if(visited.has(u)) continue;
+    visited.add(u); order.push(u);
+    if(u===target) break;
+    for(const {to,w} of adj[u]){
+      relax++;
+      if(dist[u]+w<dist[to]){ dist[to]=dist[u]+w; prev[to]=u; pq.push([dist[to]+h(to),to]); }
+    }
+  }
+  return {order,cost:dist[target],expanded:order.length,relax,path:buildPath(prev,source,target)};
+}
+function bidirectional(source,target,removed=new Set()){
+  const adj=buildAdj(removed);
+  const distF={}, distB={}; Object.keys(nodes).forEach(n=>{distF[n]=Infinity; distB[n]=Infinity;});
+  distF[source]=0; distB[target]=0;
+  const prevF={}, prevB={}, visitedF=new Set(), visitedB=new Set();
+  const orderF=[], orderB=[];
+  const pqF=[[0,source]], pqB=[[0,target]];
+  let best=Infinity, meet=null, relax=0;
+  while(pqF.length && pqB.length){
+    pqF.sort((a,b)=>a[0]-b[0]);
+    const [df,uf]=pqF.shift();
+    if(!visitedF.has(uf)){
+      visitedF.add(uf); orderF.push(uf);
+      for(const {to,w} of adj[uf]){
+        relax++;
+        if(distF[uf]+w<distF[to]){ distF[to]=distF[uf]+w; prevF[to]=uf; pqF.push([distF[to],to]); }
+        if(visitedB.has(to) && distF[uf]+w+distB[to]<best){ best=distF[uf]+w+distB[to]; meet=to; }
+      }
+      if(visitedB.has(uf) && distF[uf]+distB[uf]<best){ best=distF[uf]+distB[uf]; meet=uf; }
+    }
+    pqB.sort((a,b)=>a[0]-b[0]);
+    const [db,ub]=pqB.shift();
+    if(!visitedB.has(ub)){
+      visitedB.add(ub); orderB.push(ub);
+      for(const {to,w} of adj[ub]){
+        relax++;
+        if(distB[ub]+w<distB[to]){ distB[to]=distB[ub]+w; prevB[to]=ub; pqB.push([distB[to],to]); }
+        if(visitedF.has(to) && distB[ub]+w+distF[to]<best){ best=distB[ub]+w+distF[to]; meet=to; }
+      }
+      if(visitedF.has(ub) && distB[ub]+distF[ub]<best){ best=distB[ub]+distF[ub]; meet=ub; }
+    }
+    const topF = pqF.length? Math.min(...pqF.map(x=>x[0])) : Infinity;
+    const topB = pqB.length? Math.min(...pqB.map(x=>x[0])) : Infinity;
+    if(topF+topB>=best) break;
+  }
+  let path=null;
+  if(meet!==null){
+    const pf = buildPath(prevF, source, meet) || [meet];
+    const pbFwd = buildPath(prevB, target, meet) || [meet]; // target..meet
+    const pbRev = pbFwd.slice().reverse(); // meet..target
+    path = pf.concat(pbRev.slice(1));
+  }
+  return {orderF, orderB, cost:(best===Infinity?Infinity:best), expanded:orderF.length+orderB.length, relax, path};
+}
+
+/* ---------- SVG RENDER HELPERS ---------- */
+function renderGraph(edgeGroupId, nodeGroupId, opts){
+  opts = opts||{};
+  const eg = document.getElementById(edgeGroupId);
+  const ng = document.getElementById(nodeGroupId);
+  eg.innerHTML=''; ng.innerHTML='';
+  edgeList.forEach((e,i)=>{
+    const [u,v,w]=e;
+    const nu=nodes[u], nv=nodes[v];
+    const mx=(nu.x+nv.x)/2, my=(nu.y+nv.y)/2;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',nu.x); line.setAttribute('y1',nu.y);
+    line.setAttribute('x2',nv.x); line.setAttribute('y2',nv.y);
+    line.setAttribute('class','edge-line');
+    line.setAttribute('id', (opts.prefix||'')+'edge-'+i);
+    if(opts.clickable){
+      line.style.pointerEvents='stroke';
+      line.addEventListener('click', ()=>toggleEdge(i));
+    }
+    eg.appendChild(line);
+    const label=document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x',mx); label.setAttribute('y',my-6);
+    label.setAttribute('text-anchor','middle');
+    label.textContent=w;
+    eg.appendChild(label);
+  });
+  Object.keys(nodes).forEach(n=>{
+    const {x,y}=nodes[n];
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',13);
+    c.setAttribute('class','node-circle');
+    c.setAttribute('id',(opts.prefix||'')+'node-'+n);
+    c.setAttribute('fill', n===SOURCE?'var(--green)': n===TARGET?'#3a4256':'var(--panel-2)');
+    ng.appendChild(c);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',x); t.setAttribute('y',y+4);
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('class','node-label');
+    t.textContent=n;
+    ng.appendChild(t);
+  });
+}
+
+/* ---------- SLIDE 4: ROUTE FINDER DEMO ---------- */
+renderGraph('rf-edges','rf-nodes',{prefix:'rf-'});
+function resetDemo(){
+  renderGraph('rf-edges','rf-nodes',{prefix:'rf-'});
+  document.getElementById('metricsBody').innerHTML = '<tr><td class="mono" style="color:var(--muted)">—</td><td class="mono">—</td><td class="mono">—</td></tr>';
+}
+function animateRun(result, prefix, cb){
+  let i=0;
+  const order = result.order || (result.orderF && result.orderB ? interleave(result.orderF, result.orderB) : []);
+  function step(){
+    if(i<order.length){
+      const el = document.getElementById(prefix+'node-'+order[i]);
+      if(el && order[i]!==SOURCE && order[i]!==TARGET) el.classList.add('visited');
+      i++; setTimeout(step,140);
+    } else {
+      if(result.path){
+        for(let k=0;k<result.path.length-1;k++){
+          const u=result.path[k], v=result.path[k+1];
+          const idx = edgeList.findIndex(([eu,ev],ix)=> (eu===u&&ev===v)||(eu===v&&ev===u));
+          const el = document.getElementById(prefix+'edge-'+idx);
+          if(el) el.classList.add('visited-path');
+        }
+        document.getElementById(prefix+'node-'+SOURCE).classList.add('onpath');
+        document.getElementById(prefix+'node-'+TARGET).classList.add('onpath');
+      }
+      if(cb) cb();
+    }
+  }
+  step();
+}
+function interleave(a,b){
+  const out=[]; const n=Math.max(a.length,b.length);
+  for(let i=0;i<n;i++){ if(a[i]) out.push(a[i]); if(b[i]) out.push(b[i]); }
+  return out;
+}
+function runDemo(kind){
+  resetDemo();
+  let res;
+  if(kind==='dijkstra') res = dijkstra(SOURCE,TARGET);
+  else if(kind==='astar') res = astar(SOURCE,TARGET);
+  else res = bidirectional(SOURCE,TARGET);
+  animateRun(res,'rf-', ()=>{
+    document.getElementById('metricsBody').innerHTML =
+      '<tr><td>'+kind+'</td><td>'+res.expanded+'</td><td>'+res.cost+'</td></tr>';
+  });
+}
+function compareAll(){
+  resetDemo();
+  const d=dijkstra(SOURCE,TARGET), a=astar(SOURCE,TARGET), b=bidirectional(SOURCE,TARGET);
+  document.getElementById('metricsBody').innerHTML =
+    '<tr><td>dijkstra</td><td>'+d.expanded+'</td><td>'+d.cost+'</td></tr>'+
+    '<tr><td>astar</td><td>'+a.expanded+'</td><td>'+a.cost+'</td></tr>'+
+    '<tr><td>bidirectional</td><td>'+b.expanded+'</td><td>'+b.cost+'</td></tr>';
+  animateRun(d,'rf-',null);
+}
+
+/* ---------- SLIDE 5: CRITICALITY DEMO ---------- */
+renderGraph('cr-edges','cr-nodes',{prefix:'cr-', clickable:true});
+let removedEdges = new Set();
+const baseCost = dijkstra(SOURCE,TARGET).cost;
+document.getElementById('critReadout').textContent = 'Baseline M_base = '+baseCost+' · click a road to sever it';
+
+function toggleEdge(i){
+  if(removedEdges.has(i)) removedEdges.delete(i); else removedEdges.add(i);
+  const el = document.getElementById('cr-edge-'+i);
+  el.classList.toggle('removed', removedEdges.has(i));
+  const res = dijkstra(SOURCE,TARGET,removedEdges);
+  const readout = document.getElementById('critReadout');
+  if(res.cost===Infinity){
+    readout.innerHTML = 'M_base = '+baseCost+' · M_mutated = <span class="red">unreachable</span> · C_e = <span class="red">∞ — critical bridge</span>';
+  } else {
+    const ce = ((res.cost-baseCost)/baseCost);
+    const flag = ce>0.5 ? ' <span class="red">BOTTLENECK</span>' : '';
+    readout.innerHTML = 'M_base = '+baseCost+' · M_mutated = '+res.cost+' · C_e = '+ce.toFixed(2)+flag;
+  }
+}
+function resetCriticality(){
+  removedEdges = new Set();
+  renderGraph('cr-edges','cr-nodes',{prefix:'cr-', clickable:true});
+  document.getElementById('critReadout').textContent = 'Baseline M_base = '+baseCost+' · click a road to sever it';
+  document.getElementById('sweepReadout').style.display='none';
+}
+function runFullSweep(){
+  const results = edgeList.map((e,i)=>{
+    const res = dijkstra(SOURCE,TARGET,new Set([i]));
+    const ce = res.cost===Infinity ? 999 : (res.cost-baseCost)/baseCost;
+    return {i, ce};
+  });
+  const maxCe = Math.min(3, Math.max(...results.map(r=>r.ce===999?1.5:r.ce), 0.001));
+  results.forEach(r=>{
+    const el = document.getElementById('cr-edge-'+r.i);
+    if(!el) return;
+    const t = Math.min(1, (r.ce===999?maxCe:r.ce)/maxCe);
+    el.style.stroke = mixColor(t);
+    el.style.strokeWidth = (2.5 + t*3);
+  });
+  const top = results.slice().sort((a,b)=>b.ce-a.ce).slice(0,3);
+  const sweepEl = document.getElementById('sweepReadout');
+  sweepEl.style.display='block';
+  sweepEl.innerHTML = '<strong style="color:var(--red)">Top bottlenecks</strong><br>' +
+    top.map(r=>{
+      const [u,v]=edgeList[r.i];
+      return u+'–'+v+' &nbsp; C_e = '+(r.ce===999?'∞':r.ce.toFixed(2));
+    }).join('<br>');
+}
+function mixColor(t){
+  // teal (79,209,197) -> red (232,96,76)
+  const c1=[79,209,197], c2=[232,96,76];
+  const r=Math.round(c1[0]+(c2[0]-c1[0])*t);
+  const g=Math.round(c1[1]+(c2[1]-c1[1])*t);
+  const b=Math.round(c1[2]+(c2[2]-c1[2])*t);
+  return 'rgb('+r+','+g+','+b+')';
+}
+
+/* ---------- DECORATIVE HERO / END GRAPHS ---------- */
+function decorativeGraph(groupId, viewW, viewH, animate){
+  const g = document.getElementById(groupId);
+  if(!g) return;
+  const pts = [];
+  const cols=4, rows=3;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      pts.push({x: 30 + c*(viewW-60)/(cols-1) + (r%2?18:0), y: 30 + r*(viewH-60)/(rows-1)});
+    }
+  }
+  const links=[];
+  pts.forEach((p,i)=>{
+    pts.forEach((q,j)=>{
+      if(i<j && Math.hypot(p.x-q.x,p.y-q.y) < viewW/cols*1.15) links.push([i,j]);
+    });
+  });
+  links.forEach(([i,j])=>{
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',pts[i].x); l.setAttribute('y1',pts[i].y);
+    l.setAttribute('x2',pts[j].x); l.setAttribute('y2',pts[j].y);
+    l.setAttribute('stroke','#263248'); l.setAttribute('stroke-width','1.5');
+    g.appendChild(l);
+  });
+  pts.forEach((p,i)=>{
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',p.x); c.setAttribute('cy',p.y); c.setAttribute('r',5);
+    c.setAttribute('fill', i===0?'var(--green)': i===pts.length-1?'var(--amber)':'#3a4256');
+    g.appendChild(c);
+  });
+  if(animate && links.length){
+    const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('r',4); dot.setAttribute('fill','var(--amber)');
+    g.appendChild(dot);
+    let li=0;
+    function move(){
+      const [i,j]=links[li%links.length];
+      const p=pts[i], q=pts[j];
+      const dur=900; const start=performance.now();
+      function frame(t){
+        const k=Math.min(1,(t-start)/dur);
+        dot.setAttribute('cx', p.x+(q.x-p.x)*k);
+        dot.setAttribute('cy', p.y+(q.y-p.y)*k);
+        if(k<1) requestAnimationFrame(frame);
+        else { li++; move(); }
+      }
+      requestAnimationFrame(frame);
+    }
+    move();
+  }
+}
+decorativeGraph('heroGraph', 420, 320, true);
+decorativeGraph('endGraph', 300, 220, true);
+
+/* ---------- SLIDE 6: BENCHMARK CHART (illustrative) ---------- */
+(function(){
+  const svg = document.getElementById('benchChart');
+  const W=380,H=260, pad=36;
+  const n=7;
+  const xs = Array.from({length:n}, (_,i)=>i);
+  const single = xs.map(x=> (x+1)*Math.log2((x+1)*4+2) * 4);
+  const sweep = xs.map(x=> (x+1)*(x+1)*Math.log2((x+1)*4+2) * 1.6);
+  const maxY = Math.max(...sweep);
+  function px(i){ return pad + i*(W-2*pad)/(n-1); }
+  function py(v){ return H-pad - (v/maxY)*(H-2*pad); }
+  // axes
+  const axis=document.createElementNS('http://www.w3.org/2000/svg','line');
+  axis.setAttribute('x1',pad); axis.setAttribute('y1',H-pad); axis.setAttribute('x2',W-pad); axis.setAttribute('y2',H-pad);
+  axis.setAttribute('stroke','#26324a'); svg.appendChild(axis);
+  const axisY=document.createElementNS('http://www.w3.org/2000/svg','line');
+  axisY.setAttribute('x1',pad); axisY.setAttribute('y1',pad); axisY.setAttribute('x2',pad); axisY.setAttribute('y2',H-pad);
+  axisY.setAttribute('stroke','#26324a'); svg.appendChild(axisY);
+  function drawLine(arr,color){
+    const pts = arr.map((v,i)=> px(i)+','+py(v)).join(' ');
+    const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+    pl.setAttribute('points',pts); pl.setAttribute('fill','none');
+    pl.setAttribute('stroke',color); pl.setAttribute('stroke-width','2.5');
+    svg.appendChild(pl);
+    arr.forEach((v,i)=>{
+      const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx',px(i)); c.setAttribute('cy',py(v)); c.setAttribute('r',3); c.setAttribute('fill',color);
+      svg.appendChild(c);
+    });
+  }
+  drawLine(single,'#4FD1C5');
+  drawLine(sweep,'#E8A33D');
+  const lx=document.createElementNS('http://www.w3.org/2000/svg','text');
+  lx.setAttribute('x',W/2); lx.setAttribute('y',H-8); lx.setAttribute('text-anchor','middle');
+  lx.textContent='grid size →'; svg.appendChild(lx);
+  const ly=document.createElementNS('http://www.w3.org/2000/svg','text');
+  ly.setAttribute('x',12); ly.setAttribute('y',pad-10); ly.textContent='time'; svg.appendChild(ly);
+})();
+</script>
+</body>
+</html>
